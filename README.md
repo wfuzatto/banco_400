@@ -2,16 +2,35 @@
 
 Visualizador web estático que transforma arquivos de **cobrança CNAB 400** em uma conferência legível: posições, campos oficiais, valores interpretados e bytes originais. Não possui backend nem dependências externas.
 
+**Configuração atual:** somente **Itaú (341)**, com proteção contra a leitura de arquivos de outros bancos. Os layouts do Bradesco (237) permanecem no projeto para uso futuro.
+
 ## Como usar
 
 1. Abra a página e clique em **Entre com arquivo** (ou arraste o arquivo).
 2. Selecione .REM, .RET, .TXT, .TST, .RST, .CNAB ou .400, até 25 MB.
-3. O sistema reconhece o banco pelas posições 077–079 do header e o fluxo pela posição 002.
+3. O sistema confere o banco pelas posições 077–079 do header e aceita somente Itaú (341), conforme a configuração atual. O fluxo é identificado pela posição 002.
 4. Na página de análise, escolha um registro ou clique em **Ver arquivo inteiro**.
 5. Busque documento, pagador ou conteúdo, veja a interpretação e os dados originais.
 6. Exporte CSV/JSON ou imprima.
 
 Os espaços no campo bruto são representados por ·, sem alterar os dados originais. Também é possível conferir o registro inteiro dividido em linhas de 40 posições.
+
+## Configuração do banco
+
+A única configuração necessária fica em **src/config.js**:
+
+```js
+export const BANK_CONFIG = Object.freeze({
+  mode: 'fixed',
+  bank: '341'
+});
+```
+
+- **Como está agora:** `mode: 'fixed'`, `bank: '341'`. Aceita somente Itaú. O código real do banco continua sendo detectado e, se for diferente de 341, o arquivo é **recusado com uma mensagem clara**, sem interpretar posições de outro banco.
+- **Para voltar à identificação automática:** altere **apenas** `mode: 'auto'`. O sistema voltará a analisar Itaú (341) e Bradesco (237) conforme o banco do cabeçalho.
+- **Para usar apenas Bradesco futuramente:** configure `mode: 'fixed'`, `bank: '237'`.
+
+Não é necessário alterar ou recuperar nenhuma definição de campo em `src/layouts.js`. A interface inicial acompanha a configuração e mantém Bradesco fora da experiência padrão enquanto Itaú estiver fixo.
 
 ## Bancos e registros mapeados
 
@@ -35,7 +54,7 @@ Os tipos que não constam da lista aparecem na íntegra, com **aviso de layout n
 - Registros com exatamente 400 bytes, mesmo sem CRLF;
 - Header tipo 0 e trailer tipo 9;
 - Número de sequência do registro (posições 395–400);
-- Identificação de banco, remessa e retorno;
+- Identificação de banco, remessa e retorno, com bloqueio de bancos diferentes do configurado;
 - Campos monetários, datas, códigos e CEP formatados;
 - Datas inválidas e caracteres não numéricos em campos tipados;
 - Campo bruto e registro original preservados visualmente.
@@ -85,6 +104,7 @@ Os testes usam dados sintéticos, sem informações pessoais dos arquivos recebi
 
 - **index.html** — página inicial e página de análise.
 - **src/app.js** — interface, navegação, busca e exportação.
+- **src/config.js** — banco fixo habilitado e modo de identificação.
 - **src/parser.js** — parser posicional por bytes e verificações.
 - **src/layouts.js** — layouts bancários declarativos separados por tipo/operação.
 - **src/styles.css** — identidade visual responsiva.
