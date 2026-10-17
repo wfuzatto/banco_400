@@ -103,3 +103,9 @@ test('rejeita binário e arquivo vazio',()=>{
   assert.throws(()=>inspectBytes(new Uint8Array()),/vazio/);
   assert.throws(()=>inspectBytes(new Uint8Array([0,1,2])),/binário/);
 });
+
+test('ocorrências não confundem remessa com retorno',()=>{
+  assert.match(interpret('02','occurrence',{flow:'rem'}),/Pedido de baixa/);
+  assert.match(interpret('02','occurrence',{flow:'ret'}),/Entrada confirmada/);
+  assert.match(interpret('06','occurrence',{flow:'ret'}),/Liquidação/);
+});
