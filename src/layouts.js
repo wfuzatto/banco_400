@@ -278,3 +278,118 @@ export function fieldsFor(bank, flow, type) {
   if(cursor<=400) covered.push(f(cursor,400,'Posições sem campo definido no manual','text',R));
   return { known:true, fields:covered };
 }
+
+
+// Arquivos de retorno Bradesco, conforme manual oficial, págs. 35–40.
+const bradescoReturnHeader=[
+ f(1,1,'Tipo de registro','code',R),f(2,2,'Operação de retorno','code',A),
+ f(3,9,'Literal RETORNO','text',A),f(10,11,'Código do serviço','code',A),
+ f(12,26,'Literal COBRANCA','text',A),
+ f(27,46,'Código da empresa','code',B),f(47,76,'Nome da empresa','text',B),
+ f(77,79,'Código do banco','code',A),f(80,94,'Nome do banco','text',A),
+ f(95,100,'Data de gravação','date6',A),
+ f(101,108,'Densidade de gravação','code',A),
+ f(109,113,'Número do aviso bancário','code',A),
+ f(114,379,'Brancos','filler',R),f(380,385,'Data do crédito','date6',D),
+ f(386,394,'Brancos','filler',R),f(395,400,'Sequencial','integer',R)
+];
+const bradescoReturnDetail=[
+ f(1,1,'Tipo de registro','code',R),f(2,3,'Tipo de inscrição empresa','registration',B),
+ f(4,17,'CPF/CNPJ empresa','code',B),f(18,20,'Zeros','filler',R),
+ f(21,37,'Identificação do beneficiário no banco','code',B),
+ f(38,62,'Controle do participante','text',T),
+ f(63,70,'Zeros','filler',R),f(71,82,'Nosso Número com dígito','code',T),
+ f(83,92,'Uso do banco','text',R),f(93,104,'Uso do banco','text',R),
+ f(105,105,'Indicador de rateio','code',I),
+ f(106,107,'Pagamento parcial','code',I),
+ f(108,108,'Carteira','code',T),
+ f(109,110,'Código da ocorrência','occurrence',I),
+ f(111,116,'Data da ocorrência','date6',D),
+ f(117,126,'Número do documento','text',T),
+ f(127,146,'Identificação do título no banco','code',T),
+ f(147,152,'Vencimento','date6',D),
+ f(153,165,'Valor do título','money',D),
+ f(166,168,'Banco cobrador','code',B),f(169,173,'Agência cobradora','code',B),
+ f(174,175,'Espécie do título','species',T),
+ f(176,188,'Despesas de cobrança','money',D),
+ f(189,201,'Outras despesas / custas','money',D),
+ f(202,214,'Juros de operação em atraso','money',D),
+ f(215,227,'IOF devido','money',D),
+ f(228,240,'Abatimento concedido','money',D),
+ f(241,253,'Desconto concedido','money',D),
+ f(254,266,'Valor pago','money',D),
+ f(267,279,'Juros de mora','money',D),
+ f(280,292,'Outros créditos','money',D),
+ f(293,294,'Brancos','filler',R),
+ f(295,295,'Motivo da confirmação de protesto','code',I),
+ f(296,301,'Data do crédito','date6',D),
+ f(302,304,'Origem do pagamento','code',I),
+ f(305,314,'Brancos','filler',R),
+ f(315,318,'Código do banco do cheque','code',I),
+ f(319,328,'Motivos de rejeição / ocorrência','text',I),
+ f(329,368,'Brancos','filler',R),
+ f(369,370,'Número do cartório','code',I),
+ f(371,380,'Número do protocolo','code',I),
+ f(381,394,'Brancos','filler',R),
+ f(395,400,'Sequencial','integer',R)
+];
+const bradescoReturnRateio=[
+ f(1,1,'Tipo de registro','code',R),f(2,17,'Identificação da empresa','code',B),
+ f(18,29,'Nosso Número','code',T),
+ f(30,30,'Código de cálculo do rateio','code',I),
+ f(31,31,'Tipo de valor','code',I),f(32,43,'Brancos','filler',R)
+];
+for(let n=0;n<3;n++){
+ const start=44+117*n, ordinal=String(n+1)+'º beneficiário';
+ const base=start;
+ bradescoReturnRateio.push(
+  f(base,base+2,'Banco do '+ordinal,'code',B),
+  f(base+3,base+7,'Agência do '+ordinal,'code',B),
+  f(base+8,base+8,'Dígito da agência do '+ordinal,'code',B),
+  f(base+9,base+20,'Conta do '+ordinal,'code',B),
+  f(base+21,base+21,'Dígito da conta do '+ordinal,'code',B),
+  f(base+22,base+36,'Valor do rateio '+ordinal,'money',D),
+  f(base+37,base+76,'Nome do '+ordinal,'text',B),
+  f(base+77,base+97,'Brancos','filler',R),
+  f(base+98,base+103,'Parcela do '+ordinal,'code',I),
+  f(base+104,base+106,'Floating do '+ordinal,'integer',I),
+  f(base+107,base+114,'Data do crédito do '+ordinal,'date8',D),
+  f(base+115,base+116,'Status do '+ordinal,'code',I)
+ );
+}
+bradescoReturnRateio.push(f(395,400,'Sequencial','integer',R));
+const bradescoReturnTrailer=[
+ f(1,1,'Tipo de registro','code',R),f(2,2,'Operação retorno','code',A),
+ f(3,4,'Tipo de registro','code',R),f(5,7,'Código do banco','code',A),
+ f(8,17,'Brancos','filler',R),
+ f(18,25,'Quantidade de títulos','integer',T),
+ f(26,39,'Valor total em cobrança','money',D),
+ f(40,47,'Aviso bancário','code',A),
+ f(48,57,'Brancos','filler',R),
+ f(58,62,'Quantidade de entradas confirmadas','integer',T),
+ f(63,74,'Valor das entradas confirmadas','money',D),
+ f(75,86,'Valor de liquidação informado','money',D),
+ f(87,91,'Quantidade de liquidações','integer',T),
+ f(92,103,'Valor de liquidações','money',D),
+ f(104,108,'Quantidade de baixas','integer',T),
+ f(109,120,'Valor de baixas','money',D),
+ f(121,125,'Quantidade de cancelamentos de abatimento','integer',T),
+ f(126,137,'Valor de cancelamentos de abatimento','money',D),
+ f(138,142,'Quantidade de alterações de vencimento','integer',T),
+ f(143,154,'Valor das alterações de vencimento','money',D),
+ f(155,159,'Quantidade de abatimentos concedidos','integer',T),
+ f(160,171,'Valor dos abatimentos concedidos','money',D),
+ f(172,176,'Quantidade de confirmações de protesto','integer',T),
+ f(177,188,'Valor de confirmações de protesto','money',D),
+ f(189,362,'Brancos','filler',R),
+ f(363,377,'Valor total de rateios','money',D),
+ f(378,385,'Quantidade de rateios','integer',T),
+ f(386,394,'Brancos','filler',R),
+ f(395,400,'Sequencial','integer',R)
+];
+LAYOUTS['237'].ret={
+ '0':bradescoReturnHeader,
+ '1':bradescoReturnDetail,
+ '3':bradescoReturnRateio,
+ '9':bradescoReturnTrailer
+};
