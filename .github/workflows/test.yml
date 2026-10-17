@@ -15,5 +15,11 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Validar parser e posições
+      - name: Conferir sintaxe da interface e configuração
+        run: |
+          node --check src/app.js
+          node --check src/config.js
+          node --check src/parser.js
+          node --check src/layouts.js
+      - name: Validar parser, banco fixo e posições
         run: node --test tests/*.test.mjs
