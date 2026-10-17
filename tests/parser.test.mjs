@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { inspectBytes, interpret, csvOf } from '../src/parser.js';
 import { fieldsFor, LAYOUTS } from '../src/layouts.js';
+import { BANK_CONFIG } from '../src/config.js';
 
 // Testes usam dados artificiais para não publicar dados bancários privados.
 const set=(line,from,to,value)=>{
@@ -65,7 +66,7 @@ test('interpreta remessa Itaú com 3 registros e campos certos',()=>{
   assert.equal(result.issues.filter(x=>x.level==='error').length,0);
 });
 test('Bradesco tem layout próprio e Nosso Número em outras posições',()=>{
-  const result=inspectBytes(encode(fixture('237')),'teste.rem');
+  const result=inspectBytes(encode(fixture('237')),'teste.rem',{mode:'auto'});
   assert.equal(result.bank,'237');
   assert.equal(result.records[1].title.nosso,'00001234567');
   assert.equal(result.records[1].fields.find(f=>f.start===82).raw,'8');
@@ -86,7 +87,7 @@ test('detecta registro de 399 bytes e sequencial fora de ordem',()=>{
 });
 test('não inventa layout para banco não cadastrado',()=>{
   const lines=fixture('999');
-  const result=inspectBytes(encode(lines));
+  const result=inspectBytes(encode(lines),'desconhecido.rem',{mode:'auto'});
   assert.equal(result.records[1].known,false);
   assert(result.issues.some(i=>i.message.includes('não possui layout cadastrado')));
 });
@@ -108,4 +109,43 @@ test('ocorrências não confundem remessa com retorno',()=>{
   assert.match(interpret('02','occurrence',{flow:'rem'}),/Pedido de baixa/);
   assert.match(interpret('02','occurrence',{flow:'ret'}),/Entrada confirmada/);
   assert.match(interpret('06','occurrence',{flow:'ret'}),/Liquidação/);
+});
+
+test('configuração padrão mantém somente Itaú 341 habilitado',()=>{
+  assert.equal(BANK_CONFIG.mode,'fixed');
+  assert.equal(BANK_CONFIG.bank,'341');
+  const result=inspectBytes(encode(fixture('341')),'itau.rem');
+  assert.equal(result.bankMode,'fixed');
+  assert.equal(result.detectedBank,'341');
+});
+test('Bradesco é bloqueado no modo fixo Itaú sem interpretação incorreta',()=>{
+  assert.throws(
+    ()=>inspectBytes(encode(fixture('237')),'bradesco.rem'),
+    error=>/somente para Itaú Unibanco \(341\)/.test(error.message) &&
+           /Bradesco \(237\)/.test(error.message) &&
+           /bloqueada/.test(error.message)
+  );
+});
+test('banco desconhecido é recusado no modo fixo Itaú',()=>{
+  assert.throws(
+    ()=>inspectBytes(encode(fixture('999')),'desconhecido.rem'),
+    /arquivo identifica código 999/
+  );
+});
+test('mudar o modo para auto reativa Bradesco sem modificar os layouts',()=>{
+  const result=inspectBytes(encode(fixture('237')),'bradesco.rem',{mode:'auto'});
+  assert.equal(result.bank,'237');
+  assert.equal(result.bankMode,'auto');
+  assert.equal(result.records[1].known,true);
+  assert.equal(result.records[1].title.nosso,'00001234567');
+});
+test('modo fixo também permite configuração explícita de Bradesco no futuro',()=>{
+  const fixed237={mode:'fixed',bank:'237'};
+  const result=inspectBytes(encode(fixture('237')),'bradesco.rem',fixed237);
+  assert.equal(result.bank,'237');
+  assert.throws(()=>inspectBytes(encode(fixture('341')),'itau.rem',fixed237),/somente para Bradesco/);
+});
+test('não aceita configuração de modo ou banco inexistente',()=>{
+  assert.throws(()=>inspectBytes(encode(fixture('341')),'x.rem',{mode:'manual',bank:'341'}),/Configuração inválida/);
+  assert.throws(()=>inspectBytes(encode(fixture('341')),'x.rem',{mode:'fixed',bank:'999'}),/Configuração inválida/);
 });
