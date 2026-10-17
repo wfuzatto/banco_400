@@ -1,4 +1,5 @@
 import { BANKS, DESCRIPTIONS, fieldsFor } from './layouts.js';
+import { BANK_CONFIG } from './config.js';
 
 export const BYTES_PER_RECORD = 400;
 const decoder = new TextDecoder('windows-1252');
@@ -82,7 +83,7 @@ function splitRecords(bytes) {
   return { lines:result, separated:hasEol };
 }
 function notice(level,message,record=null){return {level,message,record};}
-export function inspectBytes(input,name='arquivo.rem'){
+export function inspectBytes(input,name='arquivo.rem',settings=BANK_CONFIG){
   const bytes=input instanceof Uint8Array?input:new Uint8Array(input);
   if(!bytes.length)throw new Error('Arquivo vazio.');
   if(bytes.byteLength > 25*1024*1024)throw new Error('Arquivo acima do limite de 25 MB.');
@@ -91,7 +92,25 @@ export function inspectBytes(input,name='arquivo.rem'){
   if(!split.lines.length)throw new Error('Não foram encontrados registros.');
   const decoded=split.lines.map(line=>decoder.decode(line));
   const header=decoded[0]||'';
-  const bank=header.slice(76,79);
+  // O código real do banco SEMPRE é lido do cabeçalho (posições 077–079).
+  // No modo fixo, arquivos de outro banco são recusados antes do mapeamento.
+  const detectedBank=header.slice(76,79);
+  const mode=settings.mode;
+  if(mode!=='fixed' && mode!=='auto'){
+    throw new Error('Configuração inválida: modo bancário deve ser fixed ou auto.');
+  }
+  if(mode==='fixed' && !BANKS[settings.bank]){
+    throw new Error('Configuração inválida: banco fixo não cadastrado.');
+  }
+  if(mode==='fixed' && detectedBank!==settings.bank){
+    const detectedName=BANKS[detectedBank]
+      ? BANKS[detectedBank]+' ('+detectedBank+')'
+      : 'código '+(detectedBank || '(ausente)');
+    throw new Error('Este visualizador está configurado somente para '+BANKS[settings.bank]+
+      ' ('+settings.bank+'). O arquivo identifica '+detectedName+
+      '. A análise foi bloqueada para evitar interpretação com layout incorreto.');
+  }
+  const bank=mode==='fixed'?settings.bank:detectedBank;
   const flow=header[1]==='1'?'rem':header[1]==='2'?'ret':'unknown';
   const issues=[];
   if(!split.separated) issues.push(notice('info','Arquivo sem quebras de linha: registros separados em blocos de 400 bytes.'));
@@ -151,7 +170,8 @@ export function inspectBytes(input,name='arquivo.rem'){
   const typed={};
   for(const r of records)typed[r.type]=(typed[r.type]||0)+1;
   return {
-    name,size:bytes.byteLength,bank,bankName:BANKS[bank]||'Banco não identificado',
+    name,size:bytes.byteLength,bank,detectedBank,
+    bankMode:mode,bankName:BANKS[bank]||'Banco não identificado',
     flow,flowName:flow==='rem'?'Remessa':flow==='ret'?'Retorno':'Não identificado',
     date:records[0]?.fields.find(f=>f.name==='Data de geração'||f.name==='Data de gravação')?.value||'',
     company:records[0]?.fields.find(f=>f.name==='Nome da empresa')?.raw.trim()||'',
@@ -161,10 +181,10 @@ export function inspectBytes(input,name='arquivo.rem'){
     supported:records.every(r=>r.known)&&!!BANKS[bank]&&flow!=='unknown'
   };
 }
-export async function inspectFile(file){
+export async function inspectFile(file,settings=BANK_CONFIG){
   if(!file || typeof file.arrayBuffer!=='function')throw Error('Selecione um arquivo CNAB.');
   const data=await file.arrayBuffer();
-  return inspectBytes(data,file.name);
+  return inspectBytes(data,file.name,settings);
 }
 export function csvOf(result,onlyRecord=null){
   const rows=[['Registro','Tipo','Posição inicial','Posição final','Tamanho','Grupo','Campo','Valor interpretado','Valor bruto']];
