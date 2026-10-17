@@ -21,16 +21,28 @@ function asDate(s,format){
   return d.getUTCFullYear()===year&&d.getUTCMonth()===month-1&&d.getUTCDate()===day
     ? String(day).padStart(2,'0')+'/'+String(month).padStart(2,'0')+'/'+year : null;
 }
-const OCCURRENCES = {
+const REM_OCCURRENCES = {
  '01':'Entrada de título / registro','02':'Pedido de baixa','03':'Abatimento','04':'Alteração de vencimento',
  '05':'Alteração de dados','06':'Alteração de outros dados','07':'Alteração de desconto','08':'Protesto',
  '09':'Sustação de protesto','10':'Não protestar','11':'Prorrogação / instrução',
  '31':'Alteração de outros dados','34':'Alteração / instrução'
 };
+const RET_OCCURRENCES = {
+ '02':'Entrada confirmada','03':'Entrada rejeitada','06':'Liquidação / pagamento',
+ '07':'Exclusão de cadastro confirmada','08':'Exclusão de cadastro rejeitada',
+ '09':'Baixa automática','10':'Baixa por instrução','11':'Título pendente',
+ '12':'Abatimento concedido','13':'Abatimento cancelado','14':'Vencimento alterado',
+ '15':'Liquidação em cartório','17':'Liquidação após baixa',
+ '19':'Instrução de protesto confirmada','20':'Sustação de protesto confirmada',
+ '23':'Entrada em cartório','24':'Rejeição por CEP','27':'Baixa rejeitada',
+ '28':'Tarifas / custas','29':'Ocorrência do pagador','30':'Alteração rejeitada',
+ '31':'Inclusão de cadastro confirmada','32':'Instrução rejeitada',
+ '33':'Alteração confirmada','40':'Estorno de pagamento'
+};
 const REGISTRATIONS={'01':'CPF','02':'CNPJ','1':'CPF','2':'CNPJ'};
 const EMISSIONS={'1':'Banco emite o boleto','2':'Empresa emite o boleto'};
 const SPECIES={'01':'Duplicata','02':'Nota promissória','03':'Nota de seguro','05':'Recibo','10':'Letra de câmbio','11':'Nota de débito','12':'Duplicata de serviços','31':'Cartão de crédito','32':'Boleto de proposta','33':'Depósito / aporte','99':'Outros'};
-export function interpret(raw,format){
+export function interpret(raw,format,context={}){
   const s=raw.trim();
   if(!s) return '—';
   if(format==='filler') return allZero(s) ? 'Zeros de preenchimento' : 'Reservado / preenchimento';
@@ -42,7 +54,7 @@ export function interpret(raw,format){
   if(format==='registration') return REGISTRATIONS[s] ? s+' — '+REGISTRATIONS[s] : s;
   if(format==='accept') return s==='A'?'A — Aceite':s==='N'?'N — Não aceite':s;
   if(format==='emission') return EMISSIONS[s] ? s+' — '+EMISSIONS[s] : s;
-  if(format==='occurrence') return OCCURRENCES[s] ? s+' — '+OCCURRENCES[s] : s;
+  if(format==='occurrence') { const labels=context.flow==='ret'?RET_OCCURRENCES:REM_OCCURRENCES; return labels[s] ? s+' — '+labels[s] : s; }
   if(format==='species') return SPECIES[s] ? s+' — '+SPECIES[s] : s;
   if(format==='cep' && /^\d{8}$/.test(s)) return s.slice(0,5)+'-'+s.slice(5);
   return s;
