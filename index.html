@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light">
-<meta name="description" content="Visualizador CNAB 400 Bradesco e Itaú: leitura local, posições campo a campo e alertas.">
+<meta name="description" content="Visualizador CNAB 400 Itaú: leitura local de remessas e retornos, campo a campo.">
 <title>CNAB 400 · Leitor de arquivos bancários</title>
 <link rel="stylesheet" href="./src/styles.css">
 </head>
@@ -22,9 +22,9 @@
       <div class="hero-copy">
         <div class="eyebrow">CONFERÊNCIA BANCÁRIA SIMPLIFICADA</div>
         <h1>Entenda cada campo do seu <span>arquivo CNAB 400.</span></h1>
-        <p>Carregue uma remessa ou retorno e visualize as 400 posições de cada registro com nomes claros, datas, valores, explicações e validações.</p>
+        <p>Carregue uma remessa ou retorno CNAB 400 do Itaú e visualize as 400 posições de cada registro com nomes claros, datas, valores, explicações e validações.</p>
         <div class="feature-list">
-          <div><span class="feature-icon">01</span><span><b>Identificação automática</b><small>Reconhece Itaú (341) e Bradesco (237)</small></span></div>
+          <div><span class="feature-icon">01</span><span><b id="bank-mode-heading">Layout Itaú (341)</b><small id="bank-mode-description">Modo fixo: somente arquivos do Itaú</small></span></div>
           <div><span class="feature-icon">02</span><span><b>Leitura completa</b><small>Cabeçalho, títulos, complementos e trailer</small></span></div>
           <div><span class="feature-icon">03</span><span><b>Conferência com precisão</b><small>Posição exata, valor bruto e valor interpretado</small></span></div>
         </div>
@@ -38,9 +38,10 @@
           <input type="file" id="file-input" accept=".rem,.ret,.txt,.tst,.rst,.cnab,.400" aria-label="Entre com arquivo CNAB 400">
           <span class="upload-hint">.REM, .RET, .TXT · Até 25 MB</span>
         </div>
+        <div id="upload-error" class="upload-error" role="alert" hidden></div>
         <p class="security-note">◈ Seus dados bancários permanecem neste navegador. O processamento não usa servidor.</p>
       </div>
-      <div class="manual-footer">Layouts de cobrança documentados · <a href="https://download.itau.com.br/bankline/layout_cobranca_400bytes_cnab_itau.pdf" target="_blank" rel="noopener noreferrer">Manual Itaú ↗</a> · <a href="https://banco.bradesco/assets/pessoajuridica/pdf/4008-524-0121-layout-cobranca-versao-portugues.pdf" target="_blank" rel="noopener noreferrer">Manual Bradesco ↗</a></div>
+      <div class="manual-footer">Layouts de cobrança documentados · <a href="https://download.itau.com.br/bankline/layout_cobranca_400bytes_cnab_itau.pdf" target="_blank" rel="noopener noreferrer">Manual Itaú ↗</a> <span id="bradesco-manual" hidden> · <a href="https://banco.bradesco/assets/pessoajuridica/pdf/4008-524-0121-layout-cobranca-versao-portugues.pdf" target="_blank" rel="noopener noreferrer">Manual Bradesco ↗</a></span></div>
     </section>
     <section id="result-page" hidden>
       <div class="result-head">
