@@ -1,7 +1,25 @@
 import {inspectFile,csvOf} from './parser.js';
-import {SOURCES} from './layouts.js';
+import {SOURCES,BANKS} from './layouts.js';
+import {BANK_CONFIG} from './config.js';
 
 const $=id=>document.getElementById(id);
+function renderBankConfig(){
+  const automatic=BANK_CONFIG.mode==='auto';
+  const label=BANKS[BANK_CONFIG.bank]||'banco não configurado';
+  $('bank-mode-heading').textContent=automatic?'Identificação automática':'Layout '+label+' ('+BANK_CONFIG.bank+')';
+  $('bank-mode-description').textContent=automatic
+    ?'Reconhece Itaú (341) e Bradesco (237) pelo cabeçalho'
+    :'Modo fixo: somente arquivos do '+label;
+  $('hero-description').textContent=automatic
+    ?'Carregue uma remessa ou retorno CNAB 400 e visualize as 400 posições de cada registro com nomes claros, datas, valores, explicações e validações.'
+    :'Carregue uma remessa ou retorno CNAB 400 do '+label+' e visualize as 400 posições de cada registro com nomes claros, datas, valores, explicações e validações.';
+  $('bradesco-manual').hidden=!automatic && BANK_CONFIG.bank!=='237';
+}
+function showUploadError(message){
+  const el=$('upload-error');
+  el.textContent=message||'';
+  el.hidden=!message;
+}
 let current=null, selected=0, allMode=false, fieldFilter='',hideFillers=false;
 let fullWarnings=false;
 const escapeHTML=value=>String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
@@ -15,7 +33,9 @@ function save(content,name,type){
 function baseName(){return (current?.name||'cnab400').replace(/\.[^.]+$/,'').replace(/[^a-zA-Z0-9_-]+/g,'_')}
 function renderMeta(){
   $('filename').textContent=current.name;
-  const values=[current.bankName+' ('+(current.bank||'—')+')',current.flowName,'400 posições por registro',
+  const values=[current.bankName+' ('+(current.bank||'—')+')',
+    current.bankMode==='fixed'?'Banco fixo':'Detecção automática',
+    current.flowName,'400 posições por registro',
     formatBytes(current.size),current.company].filter(Boolean);
   $('metadata').innerHTML=values.map(x=>'<span>'+escapeHTML(x)+'</span>').join('');
   const errors=current.issues.filter(x=>x.level==='error').length;
@@ -134,6 +154,7 @@ function route(){
 }
 async function readFile(file){
   if(!file)return;
+  showUploadError('');
   try{
     if(file.size>25*1048576)throw Error('Arquivo acima de 25 MB.');
     current=await inspectFile(file);selected=0;allMode=false;fieldFilter='';hideFillers=false;fullWarnings=false;
@@ -141,7 +162,12 @@ async function readFile(file){
     location.hash='#/arquivo';
     route();window.scrollTo({top:0,behavior:'instant'});
     toast('Arquivo analisado localmente: '+current.records.length+' registros.');
-  }catch(error){toast('Não foi possível analisar: '+error.message)}
+  }catch(error){
+    const message='Não foi possível analisar: '+error.message;
+    showUploadError(message);
+    $('file-input').value='';
+    toast(message);
+  }
 }
 const drop=$('dropzone');
 drop.addEventListener('click',event=>{
@@ -186,4 +212,4 @@ $('print-button').addEventListener('click',()=>{
   if(!current)return;const previous=allMode;allMode=true;renderNavigation();renderDetails();
   window.print();allMode=previous;renderNavigation();renderDetails();
 });
-window.addEventListener('hashchange',route);route();
+window.addEventListener('hashchange',route);renderBankConfig();route();
